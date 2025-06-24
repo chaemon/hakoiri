@@ -254,14 +254,68 @@ function onMouseUp(e) {
   dragStart=null; draggedPiece=0;
 }
 
+function onTouchStart(e) {
+  if(!isPlayMode) return;
+  let rect = canvas.getBoundingClientRect();
+  let touch = e.touches[0]; // 最初の指
+  dragStart = { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+  draggedPiece = getPieceNumAtPos(currentBoard, dragStart.x, dragStart.y);
+}
+
+function onTouchEnd(e) {
+  if(!isPlayMode || !dragStart || draggedPiece===0) { dragStart=null; draggedPiece=0; return; }
+  let rect = canvas.getBoundingClientRect();
+  // touchend には座標がないので touchmove を使いたい場合もありますが、
+  // ここでは単純にスワイプ方向だけ取るためにtouchendのchangedTouchesから取得
+  let touch = e.changedTouches[0];
+  let dx = touch.clientX - rect.left - dragStart.x;
+  let dy = touch.clientY - rect.top - dragStart.y;
+  
+  // クリックと見なす
+  if(Math.abs(dx)<10&&Math.abs(dy)<10){
+    // 可能な方向をリストアップ
+    const directions = [
+      { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+      { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
+    ];
+    const movableDirs = directions.filter(dir => canMove(currentBoard, draggedPiece, dir, H, W));
+    if(movableDirs.length === 1) {
+      // 唯一可能な方向へ動かす
+      const dir = movableDirs[0];
+      history.push(JSON.parse(JSON.stringify(currentBoard)));
+      movePiece(currentBoard, draggedPiece, dir, H, W);
+      turn++;
+      drawBoard(currentBoard,H,W,pieceNames,colors,ctx);
+      turnDiv.textContent=`ターン: ${turn}`;
+    }
+    dragStart=null; draggedPiece=0;
+    return;
+  }
+
+  // ▼ それ以降はドラッグ用の処理（現状のまま）▼
+  let dir={dx:0,dy:0};
+  if(Math.abs(dx)>Math.abs(dy)) dir.dx=dx>0?1:-1; else dir.dy=dy>0?1:-1;
+  history.push(JSON.parse(JSON.stringify(currentBoard)));
+  if(movePiece(currentBoard, draggedPiece, dir, H, W)){
+    turn++;
+    drawBoard(currentBoard,H,W,pieceNames,colors,ctx);
+    turnDiv.textContent=`ターン: ${turn}`;
+  }
+  dragStart=null; draggedPiece=0;
+}
+
 function enableDrag(flag){
   if(flag){
-    canvas.addEventListener('mousedown',onMouseDown);
-    document.addEventListener('mouseup',onMouseUp);
+    canvas.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('touchstart', onTouchStart, { passive: true }); 
+    document.addEventListener('touchend', onTouchEnd, { passive: true }); 
     canvas.style.cursor='pointer';
   } else {
-    canvas.removeEventListener('mousedown',onMouseDown);
-    document.removeEventListener('mouseup',onMouseUp);
+    canvas.removeEventListener('mousedown', onMouseDown);
+    document.removeEventListener('mouseup', onMouseUp);
+    canvas.removeEventListener('touchstart', onTouchStart); 
+    document.removeEventListener('touchend', onTouchEnd); 
     canvas.style.cursor='default';
   }
 }
