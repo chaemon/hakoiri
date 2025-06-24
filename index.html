@@ -1,1 +1,60 @@
-Hello World!
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>箱入り娘アニメーション</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 1rem; }
+  .textarea-container {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  textarea {
+    font-family: monospace;
+    width: 100%;
+    height: 300px;
+  }
+  #board { border: 1px solid #999; cursor: pointer; margin-top: 1rem; }
+  #turn { margin-top: 0.5rem; font-weight: bold; }
+  button, input { margin-right: 0.5rem; }
+  #dataset-buttons {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+</style>
+</head>
+<body>
+<h1>箱入り娘アニメーション</h1>
+
+<div class="textarea-container">
+  <div style="flex:1">
+    <textarea id="inputData"></textarea>
+    <br><input type="file" id="inputFile" accept=".txt,.dat">
+  </div>
+  <div style="flex:1">
+    <textarea id="outputData"></textarea>
+    <br><input type="file" id="outputFile" accept=".txt,.dat">
+  </div>
+</div>
+
+<!-- この中にJSでボタン生成する -->
+<div id="dataset-buttons">
+  <span>データセット読み込み:</span>
+</div>
+
+<div style="margin-top: 1rem;">
+  <button id="loadBtn">読み込み（プレイモード）</button>
+  <button id="playBtn">再生モード</button>
+  <button id="undoBtn">Undo</button>
+</div>
+
+<canvas id="board"></canvas>
+<label for="speedSlider">速度:</label>
+<input id="speedSlider" type="range" min="1" max="10" value="5">
+<div id="turn">ターン: 0</div>
+<script src="script.js"></script>
+</body>
+</html>
