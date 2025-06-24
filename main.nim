@@ -18,7 +18,7 @@ solveProc solve():
   var
     initA = Seq[H, W: int8(nextInt() - 1)]
     dsti = nextInt() - 1
-    dstX, dstY = nextInt()
+    dstY = nextInt()
   proc getPos(a: Board):seq[tuple[x, y:int]] =
     result = Seq[M: (x: -1, y: -1)]
     for i in H:
@@ -44,6 +44,7 @@ solveProc solve():
       dY = posR[i].y - posL[i].y + 1
     size[i] = (dX, dY)
     sizeTB[size[i]].add i # 寸法 => インデックス
+  let dstX = H - size[dsti].dX
   # インデックス順にソートする
   for k, v in sizeTB.mpairs:
     v.sort
