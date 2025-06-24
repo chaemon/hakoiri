@@ -1,18 +1,23 @@
 let lastTouchX = 0;
 let lastTouchY = 0;
-
 // ====================
 // ユーティリティ
 // ====================
 function parseInputData(inputText) {
   const lines = inputText.trim().split('\n');
   const [H, W, M] = lines[0].trim().split(/\s+/).map(Number);
+
   const board = [];
   for (let i = 1; i <= H; i++) {
     board.push(lines[i].trim().split(/\s+/).map(Number));
   }
+
+  // ★ b p の行
+  const [goalPiece, leftMargin] = lines[H + 1].trim().split(/\s+/).map(Number);
+
+  // ★ pieceNames
   const pieceNames = [''].concat(lines[H + 2].trim().split(/\s+/));
-  return { H, W, M, board, pieceNames };
+  return { H, W, M, board, pieceNames, goalPiece, leftMargin };
 }
 
 function parseOutputData(outputText, H) {
@@ -57,7 +62,7 @@ function getPieceBounds(board) {
 // ====================
 // 描画
 // ====================
-function drawBoard(board,H,W,pieceNames,colors,ctx) {
+function drawBoard(board,H,W,pieceNames,colors,ctx,goalPiece,leftMargin) {
   ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
   const cellSize = 50;
 
@@ -69,45 +74,42 @@ function drawBoard(board,H,W,pieceNames,colors,ctx) {
     }
   }
 
-  // ★ 駒間の細い線
+  // 細線（駒間の線）
   ctx.lineWidth = 2;
   ctx.strokeStyle = "#666";
   ctx.beginPath();
   for (let r = 0; r < H; r++) {
     for (let c = 0; c < W; c++) {
       const val = board[r][c];
-      if (r === 0 || board[r-1][c] !== val) {
-        ctx.moveTo(c*cellSize, r*cellSize); ctx.lineTo((c+1)*cellSize, r*cellSize);
-      }
-      if (c === 0 || board[r][c-1] !== val) {
-        ctx.moveTo(c*cellSize, r*cellSize); ctx.lineTo(c*cellSize, (r+1)*cellSize);
-      }
-      if (r === H-1 || board[r+1][c] !== val) {
-        ctx.moveTo(c*cellSize, (r+1)*cellSize); ctx.lineTo((c+1)*cellSize, (r+1)*cellSize);
-      }
-      if (c === W-1 || board[r][c+1] !== val) {
-        ctx.moveTo((c+1)*cellSize, r*cellSize); ctx.lineTo((c+1)*cellSize, (r+1)*cellSize);
-      }
+      if (r === 0 || board[r-1][c] !== val) ctx.moveTo(c*cellSize,r*cellSize), ctx.lineTo((c+1)*cellSize,r*cellSize);
+      if (c === 0 || board[r][c-1] !== val) ctx.moveTo(c*cellSize,r*cellSize), ctx.lineTo(c*cellSize,(r+1)*cellSize);
+      if (r === H-1 || board[r+1][c] !== val) ctx.moveTo(c*cellSize,(r+1)*cellSize), ctx.lineTo((c+1)*cellSize,(r+1)*cellSize);
+      if (c === W-1 || board[r][c+1] !== val) ctx.moveTo((c+1)*cellSize,r*cellSize), ctx.lineTo((c+1)*cellSize,(r+1)*cellSize);
     }
   }
   ctx.stroke();
 
-  // ★ 太い外枠（出口部分は除外する） 
+  // ★ 出口のあるゴール部分だけ下枠を消す
+  const bounds = getPieceBounds(board)[goalPiece];
+  const goalWidth = (bounds.maxCol - bounds.minCol + 1);
+  const exitStartX = (leftMargin) * cellSize;
+  const exitEndX = (leftMargin + goalWidth) * cellSize;
+
   ctx.lineWidth = 6;
   ctx.strokeStyle = "#333";
   ctx.beginPath();
-  // 上
+  // 上枠
   ctx.moveTo(0,0); ctx.lineTo(W*cellSize,0);
-  // 左
+  // 左枠
   ctx.moveTo(0,0); ctx.lineTo(0,H*cellSize);
-  // 右
+  // 右枠
   ctx.moveTo(W*cellSize,0); ctx.lineTo(W*cellSize,H*cellSize);
-  // ★ 下 (出口が右下2マス分の場合)
-  ctx.moveTo(0,H*cellSize); ctx.lineTo((W-2)*cellSize,H*cellSize); // 出口手前までだけ
-  ctx.moveTo(W*cellSize,H*cellSize); ctx.lineTo((W)*cellSize,H*cellSize); // ★ 右から2マス分だけ描かない
+  // ★ 下枠 (出口部分は描かない)
+  ctx.moveTo(0,H*cellSize); ctx.lineTo(exitStartX,H*cellSize);  // 出口左
+  ctx.moveTo(exitEndX,H*cellSize); ctx.lineTo(W*cellSize,H*cellSize); // 出口右
   ctx.stroke();
 
-  // 駒名ラベル
+  // 駒名
   const pieces = getPieceBounds(board);
   ctx.fillStyle="#222"; ctx.font="bold 18px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
   for (let num in pieces) {
@@ -121,6 +123,8 @@ function drawBoard(board,H,W,pieceNames,colors,ctx) {
 // ====================
 // 移動
 // ====================
+// （以下、movePiece, canMove などはそのまま）
+
 function canMove(board,pieceNum,dir,H,W){
   let pos=[];
   for(let r=0;r<H;r++){for(let c=0;c<W;c++){if(board[r][c]===pieceNum)pos.push({r,c});}}
@@ -137,6 +141,15 @@ function movePiece(board,pieceNum,dir,H,W){
   pos.forEach(p=>board[p.r+dir.dy][p.c+dir.dx]=pieceNum);
   return true;
 }
+
+// ====================
+// アニメーション、データセット読み込み、イベントリスナー
+// ====================
+// （以下はそのままです。長いので割愛）
+
+// この drawBoard の呼び出しに goalPiece, leftMargin を渡すように、
+// initPlayMode やアニメーション部分も修正してください：
+
 
 // ====================
 // アニメーション
@@ -160,7 +173,7 @@ function animate(states,H,W,pieceNames,colors,ctx,turnDiv,undoBtn){
       enableDrag(true); undoBtn.disabled=false; isPlayMode=true;
       return;
     }
-    drawBoard(states[idx],H,W,pieceNames,colors,ctx);
+    drawBoard(states[idx],H,W,pieceNames,colors,ctx,goalPiece,leftMargin);
     turnDiv.textContent=`ターン: ${idx}`;
     idx++;
     timerId=setTimeout(step,1100-animationSpeed*100);
@@ -200,7 +213,7 @@ function undo() {
   if(history.length>0){
     currentBoard=history.pop();
     turn--;
-    drawBoard(currentBoard,H,W,pieceNames,colors,ctx);
+    drawBoard(currentBoard,H,W,pieceNames,colors,ctx,goalPiece,leftMargin);
     turnDiv.textContent=`ターン: ${turn}`;
   }
 }
@@ -238,7 +251,7 @@ function onMouseUp(e) {
       history.push(JSON.parse(JSON.stringify(currentBoard)));
       movePiece(currentBoard, draggedPiece, dir, H, W);
       turn++;
-      drawBoard(currentBoard,H,W,pieceNames,colors,ctx);
+      drawBoard(currentBoard,H,W,pieceNames,colors,ctx,goalPiece,leftMargin);
       turnDiv.textContent=`ターン: ${turn}`;
     }
     dragStart=null; draggedPiece=0;
@@ -251,7 +264,7 @@ function onMouseUp(e) {
   history.push(JSON.parse(JSON.stringify(currentBoard)));
   if(movePiece(currentBoard, draggedPiece, dir, H, W)){
     turn++;
-    drawBoard(currentBoard,H,W,pieceNames,colors,ctx);
+    drawBoard(currentBoard,H,W,pieceNames,colors,ctx,goalPiece,leftMargin);
     turnDiv.textContent=`ターン: ${turn}`;
   }
   dragStart=null; draggedPiece=0;
@@ -290,7 +303,7 @@ function onTouchEnd(e) {
       history.push(JSON.parse(JSON.stringify(currentBoard)));
       movePiece(currentBoard, draggedPiece, dir, H, W);
       turn++;
-      drawBoard(currentBoard,H,W,pieceNames,colors,ctx);
+      drawBoard(currentBoard,H,W,pieceNames,colors,ctx,goalPiece,leftMargin);
       turnDiv.textContent=`ターン: ${turn}`;
     }
   } else {
@@ -299,7 +312,7 @@ function onTouchEnd(e) {
     history.push(JSON.parse(JSON.stringify(currentBoard)));
     if(movePiece(currentBoard, draggedPiece, dir, H, W)){
       turn++;
-      drawBoard(currentBoard,H,W,pieceNames,colors,ctx);
+      drawBoard(currentBoard,H,W,pieceNames,colors,ctx,goalPiece,leftMargin);
       turnDiv.textContent=`ターン: ${turn}`;
     }
   }
@@ -333,10 +346,11 @@ function initPlayMode(inputText){
   history=[];
   let data=parseInputData(inputText);
   H=data.H; W=data.W; M=data.M; pieceNames=data.pieceNames;
+  goalPiece=data.goalPiece; leftMargin=data.leftMargin;
   colors=generateColors(M);
   currentBoard=JSON.parse(JSON.stringify(data.board));
   canvas.width=W*50; canvas.height=H*50;
-  drawBoard(currentBoard,H,W,pieceNames,colors,ctx);
+  drawBoard(currentBoard,H,W,pieceNames,colors,ctx,goalPiece,leftMargin);
   turnDiv.textContent=`ターン: ${turn}`;
   enableDrag(true);
 }
