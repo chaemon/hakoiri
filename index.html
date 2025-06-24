@@ -10,6 +10,11 @@
     gap: 1rem;
     margin-bottom: 1rem;
   }
+  .textarea-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
   textarea {
     font-family: monospace;
     width: 100%;
@@ -24,17 +29,38 @@
     align-items: center;
     gap: 0.5rem;
   }
+  /* 盤面と説明を横並びにする */
+  .board-and-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    margin-top: 1rem;
+  }
+  .info-box {
+    max-width: 280px;
+    padding: 1rem;
+    background: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+  .dataset-button.active {
+    background-color: #4caf50;
+    color: white;
+  }
 </style>
 </head>
 <body>
 <h1>箱入り娘ビジュアライザー</h1>
 
 <div class="textarea-container">
-  <div style="flex:1">
+  <div class="textarea-block">
+    <label>盤面の情報</label>
     <textarea id="inputData"></textarea>
     <br><input type="file" id="inputFile" accept=".txt,.dat">
   </div>
-  <div style="flex:1">
+  <div class="textarea-block">
+    <label>手順</label>
     <textarea id="outputData"></textarea>
     <br><input type="file" id="outputFile" accept=".txt,.dat">
   </div>
@@ -51,7 +77,18 @@
   <button id="undoBtn">Undo</button>
 </div>
 
-<canvas id="board"></canvas>
+<!-- 盤面とテキストフォーマット説明 -->
+<div class="board-and-info">
+  <canvas id="board"></canvas>
+  <div class="info-box">
+    <h3>テキストフォーマット</h3>
+    <p><strong>盤面情報:</strong><br>
+      1行目に「縦 横 駒数」、その後に盤面の数字を行ごとに記載。</p>
+    <p><strong>手順:</strong><br>
+      1行目にターン数、次に各ターンの盤面を行ごとに記載。</p>
+  </div>
+</div>
+
 <label for="speedSlider">速度:</label>
 <input id="speedSlider" type="range" min="1" max="10" value="5">
 <div id="turn">ターン: 0</div>

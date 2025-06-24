@@ -8,7 +8,6 @@ function parseInputData(inputText) {
   for (let i = 1; i <= H; i++) {
     board.push(lines[i].trim().split(/\s+/).map(Number));
   }
-  // ここはベースと同じくH+2行目（0始まりなのでH+2行目はlines[H+2]）
   const pieceNames = [''].concat(lines[H + 2].trim().split(/\s+/));
   return { H, W, M, board, pieceNames };
 }
@@ -58,32 +57,61 @@ function getPieceBounds(board) {
 function drawBoard(board,H,W,pieceNames,colors,ctx) {
   ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
   const cellSize = 50;
-  for(let r=0;r<H;r++){
-    for(let c=0;c<W;c++){
+
+  // 各セル塗りつぶし
+  for (let r = 0; r < H; r++) {
+    for (let c = 0; c < W; c++) {
       ctx.fillStyle = colors[board[r][c]];
-      ctx.fillRect(c*cellSize,r*cellSize,cellSize,cellSize);
+      ctx.fillRect(c*cellSize, r*cellSize, cellSize, cellSize);
     }
   }
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = "#333";
+
+  // ★ 駒間の細い線
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#666";
   ctx.beginPath();
-  for(let r=0;r<H;r++){
-    for(let c=0;c<W;c++){
-      const val=board[r][c]; if(val===0) continue;
-      if(r===0||board[r-1][c]!==val) {ctx.moveTo(c*cellSize,r*cellSize); ctx.lineTo((c+1)*cellSize,r*cellSize);}
-      if(c===0||board[r][c-1]!==val) {ctx.moveTo(c*cellSize,r*cellSize); ctx.lineTo(c*cellSize,(r+1)*cellSize);}
-      if(r===H-1||board[r+1][c]!==val) {ctx.moveTo(c*cellSize,(r+1)*cellSize); ctx.lineTo((c+1)*cellSize,(r+1)*cellSize);}
-      if(c===W-1||board[r][c+1]!==val) {ctx.moveTo((c+1)*cellSize,r*cellSize); ctx.lineTo((c+1)*cellSize,(r+1)*cellSize);}
+  for (let r = 0; r < H; r++) {
+    for (let c = 0; c < W; c++) {
+      const val = board[r][c];
+      if (r === 0 || board[r-1][c] !== val) {
+        ctx.moveTo(c*cellSize, r*cellSize); ctx.lineTo((c+1)*cellSize, r*cellSize);
+      }
+      if (c === 0 || board[r][c-1] !== val) {
+        ctx.moveTo(c*cellSize, r*cellSize); ctx.lineTo(c*cellSize, (r+1)*cellSize);
+      }
+      if (r === H-1 || board[r+1][c] !== val) {
+        ctx.moveTo(c*cellSize, (r+1)*cellSize); ctx.lineTo((c+1)*cellSize, (r+1)*cellSize);
+      }
+      if (c === W-1 || board[r][c+1] !== val) {
+        ctx.moveTo((c+1)*cellSize, r*cellSize); ctx.lineTo((c+1)*cellSize, (r+1)*cellSize);
+      }
     }
   }
   ctx.stroke();
+
+  // ★ 太い外枠（出口部分は除外する） 
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#333";
+  ctx.beginPath();
+  // 上
+  ctx.moveTo(0,0); ctx.lineTo(W*cellSize,0);
+  // 左
+  ctx.moveTo(0,0); ctx.lineTo(0,H*cellSize);
+  // 右
+  ctx.moveTo(W*cellSize,0); ctx.lineTo(W*cellSize,H*cellSize);
+  // ★ 下 (出口が右下2マス分の場合)
+  ctx.moveTo(0,H*cellSize); ctx.lineTo((W-2)*cellSize,H*cellSize); // 出口手前までだけ
+  ctx.moveTo(W*cellSize,H*cellSize); ctx.lineTo((W)*cellSize,H*cellSize); // ★ 右から2マス分だけ描かない
+  ctx.stroke();
+
+  // 駒名ラベル
   const pieces = getPieceBounds(board);
   ctx.fillStyle="#222"; ctx.font="bold 18px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
-  for(let num in pieces){
+  for (let num in pieces) {
     const p = pieces[num];
-    const cx=(p.minCol+p.maxCol+1)/2*cellSize;
-    const cy=(p.minRow+p.maxRow+1)/2*cellSize;
-    ctx.fillText(pieceNames[num],cx,cy);
+    const cx = (p.minCol+p.maxCol+1)/2*cellSize;
+    const cy = (p.minRow+p.maxRow+1)/2*cellSize;
+    ctx.fillText(pieceNames[num], cx, cy);
   }
 }
 
@@ -111,13 +139,12 @@ function movePiece(board,pieceNum,dir,H,W){
 // アニメーション
 // ====================
 let timerId=null;
-let animationSpeed = 5; // デフォルト速度
+let animationSpeed = 5;
 
 function animate(states,H,W,pieceNames,colors,ctx,turnDiv,undoBtn){
-  // もし前回の再生が残っていたら止める
-  if (timerId) {
+  if(timerId) {
     clearTimeout(timerId);
-    timerId = null;
+    timerId=null;
   }
   let idx=0;
   undoBtn.disabled = true;
@@ -126,17 +153,14 @@ function animate(states,H,W,pieceNames,colors,ctx,turnDiv,undoBtn){
 
   function step(){
     if(idx>=states.length){
-      clearTimeout(timerId);
-      timerId=null;
-      enableDrag(true);
-      undoBtn.disabled=false;
-      isPlayMode=true;
+      clearTimeout(timerId); timerId=null;
+      enableDrag(true); undoBtn.disabled=false; isPlayMode=true;
       return;
     }
     drawBoard(states[idx],H,W,pieceNames,colors,ctx);
     turnDiv.textContent=`ターン: ${idx}`;
     idx++;
-    timerId=setTimeout(step, 1100 - animationSpeed*100); // 速度調整
+    timerId=setTimeout(step,1100-animationSpeed*100);
   }
   step();
 }
@@ -147,21 +171,16 @@ function animate(states,H,W,pieceNames,colors,ctx,turnDiv,undoBtn){
 function loadDataSet(num) {
   const basePath = './data/';
   fetch(`${basePath}in_${num}.txt?t=${Date.now()}`)
-    .then(res => {
-      if(!res.ok) throw new Error(`in_${num}.txt not found`);
-      return res.text();
-    })
+    .then(res => { if(!res.ok) throw new Error(`in_${num}.txt not found`); return res.text(); })
     .then(txt => { inputTextArea.value = txt; initPlayMode(txt); })
     .catch(err => alert(`in_${num}.txt の読み込みに失敗: ${err}`));
   
   fetch(`${basePath}out_${num}.txt?t=${Date.now()}`)
-    .then(res => {
-      if(!res.ok) throw new Error(`out_${num}.txt not found`);
-      return res.text();
-    })
+    .then(res => { if(!res.ok) throw new Error(`out_${num}.txt not found`); return res.text(); })
     .then(txt => { outputTextArea.value = txt; })
     .catch(err => alert(`out_${num}.txt の読み込みに失敗: ${err}`));
 }
+
 // ====================
 // メイン
 // ====================
@@ -196,15 +215,36 @@ function onMouseDown(e){
   dragStart={ x:e.clientX-rect.left, y:e.clientY-rect.top };
   draggedPiece=getPieceNumAtPos(currentBoard,dragStart.x,dragStart.y);
 }
-function onMouseUp(e){
+function onMouseUp(e) {
   if(!isPlayMode||!dragStart||draggedPiece===0) { dragStart=null; draggedPiece=0; return; }
   let rect=canvas.getBoundingClientRect();
   let dx=e.clientX-rect.left-dragStart.x;
   let dy=e.clientY-rect.top-dragStart.y;
-  if(Math.abs(dx)<10&&Math.abs(dy)<10){ dragStart=null; draggedPiece=0; return; }
+
+  // クリックと見なす
+  if(Math.abs(dx)<10&&Math.abs(dy)<10){
+    // 可能な方向をリストアップ
+    const directions = [
+      { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+      { dx: 0, dy: 1 }, { dx: 0, dy: -1 }
+    ];
+    const movableDirs = directions.filter(dir => canMove(currentBoard, draggedPiece, dir, H, W));
+    if(movableDirs.length === 1) {
+      // 唯一可能な方向へ動かす
+      const dir = movableDirs[0];
+      history.push(JSON.parse(JSON.stringify(currentBoard)));
+      movePiece(currentBoard, draggedPiece, dir, H, W);
+      turn++;
+      drawBoard(currentBoard,H,W,pieceNames,colors,ctx);
+      turnDiv.textContent=`ターン: ${turn}`;
+    }
+    dragStart=null; draggedPiece=0;
+    return;
+  }
+
+  // ▼ それ以降はドラッグ用の処理（現状のまま）▼
   let dir={dx:0,dy:0};
   if(Math.abs(dx)>Math.abs(dy)) dir.dx=dx>0?1:-1; else dir.dy=dy>0?1:-1;
-
   history.push(JSON.parse(JSON.stringify(currentBoard)));
   if(movePiece(currentBoard, draggedPiece, dir, H, W)){
     turn++;
@@ -213,6 +253,7 @@ function onMouseUp(e){
   }
   dragStart=null; draggedPiece=0;
 }
+
 function enableDrag(flag){
   if(flag){
     canvas.addEventListener('mousedown',onMouseDown);
@@ -245,28 +286,29 @@ function initPlayMode(inputText){
 document.getElementById('loadBtn').onclick=()=>initPlayMode(inputTextArea.value);
 document.getElementById('playBtn').onclick=()=>{
   if(!outputTextArea.value){
-    alert('出力データが空です');
-    return;
+    alert('出力データが空です'); return;
   }
   let states;
-  try {
-    states=parseOutputData(outputTextArea.value,H);
-  } catch(e){
-    alert('出力データの形式が正しくありません');
-    return;
-  }
+  try { states=parseOutputData(outputTextArea.value,H); }
+  catch(e){ alert('出力データの形式が正しくありません'); return; }
   animate(states,H,W,pieceNames,colors,ctx,turnDiv,undoBtn);
 };
 undoBtn.onclick=undo;
 
-// データセットボタン生成関数
+speedSlider.oninput=()=> {
+  animationSpeed = Number(speedSlider.value);
+};
+
+// ====================
+// データセットボタン生成
+// ====================
 function generateDatasetButtons(maxNum = 20) {
   const container = document.getElementById('dataset-buttons');
   container.querySelectorAll('button').forEach(btn => btn.remove());
 
   let promises = [];
   for (let i = 0; i < maxNum; i++) {
-    let p = fetch(`./data/in_${i}.txt?t=${Date.now()}`, { method: 'HEAD' })
+    let p = fetch(`./data/in_${i}.txt?t=${Date.now()}, { method: 'HEAD' }`)
       .then(res => res.ok ? i : null)
       .catch(() => null);
     promises.push(p);
@@ -277,18 +319,22 @@ function generateDatasetButtons(maxNum = 20) {
     validIndices.forEach(num => {
       const btn = document.createElement('button');
       btn.textContent = num;
-      btn.onclick = () => loadDataSet(num);
+      btn.classList.add('dataset-button');
+      btn.onclick = () => {
+        document.querySelectorAll('.dataset-button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadDataSet(num);
+      };
       container.appendChild(btn);
     });
+
+    if (validIndices.includes(0)) {
+      loadDataSet(0); 
+      const zeroButton = Array.from(container.querySelectorAll('.dataset-button')).find(b => b.textContent==='0');
+      if(zeroButton) zeroButton.classList.add('active');
+    }
   });
 }
-// ページロード時にボタン生成
-generateDatasetButtons(20); // 20くらい試す
 
-
-speedSlider.oninput=()=> {
-  animationSpeed = Number(speedSlider.value);
-};
-
-// ページロード時にデフォルトでデータセット0を読み込む
-//window.addEventListener('load',()=>{ loadDataSet(0); });
+// データセットボタン生成開始
+generateDatasetButtons(20); 
