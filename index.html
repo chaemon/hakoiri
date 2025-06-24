@@ -5,6 +5,13 @@
 <title>箱入り娘ビジュアライザー</title>
 <style>
   body { font-family: Arial, sans-serif; padding: 1rem; }
+  /* タップ時のハイライトを消す */
+  * {
+  -webkit-tap-highlight-color: transparent; /* iOS/Safari用 */
+  -webkit-touch-callout: none;               /* 長押しメニュー無効（任意） */
+  -webkit-user-select: none;                 /* 選択無効（任意） */
+  user-select: none;                         /* 選択無効（任意） */
+  }
   .textarea-container {
     display: flex;
     gap: 1rem;
