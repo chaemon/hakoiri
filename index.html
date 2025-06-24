@@ -79,8 +79,8 @@
 </div>
 
 <div style="margin-top: 1rem;">
-  <button id="loadBtn">読み込み（プレイモード）</button>
-  <button id="playBtn">再生モード</button>
+  <button id="loadBtn">リセット</button>
+  <button id="playBtn">正解</button>
   <button id="undoBtn">Undo</button>
 </div>
 
@@ -88,6 +88,11 @@
 <div class="board-and-info">
   <canvas id="board"></canvas>
   <div class="info-box">
+    <h3>使い方</h3>
+    <p>データセットの読み込みの番号ボタンを押すとデータセットが読み込まれます。盤面をドラッグすると動かせます。リセットボタンで初期配置に戻ります。</p>
+    <p>正解ボタンを押すと正解の手順が再生されます。上記のテキストエリアをフォーマットに沿って変更することで盤面を変えられます(上級者向け)</p>
+
+
     <h3>テキストフォーマット</h3>
     <p><strong>盤面情報:</strong><br>
       1行目に「縦 横 駒数」、その後に盤面の数字を行ごとに記載。</p>
