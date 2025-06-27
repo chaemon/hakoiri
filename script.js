@@ -1,5 +1,186 @@
 let lastTouchX = 0;
 let lastTouchY = 0;
+let fireworkP5;
+
+function showCongratsMessage() {
+  let msg = document.getElementById('congrats-message');
+  if (!msg) {
+    msg = document.createElement('div');
+    msg.id = 'congrats-message';
+    msg.textContent = '🎉 Congratulations! 🎉';
+    msg.style.position = 'fixed';
+    msg.style.top = '15%';
+    msg.style.left = '50%';
+    msg.style.transform = 'translate(-50%, -50%)';
+    msg.style.fontSize = '48px';
+    msg.style.fontWeight = 'bold';
+    msg.style.color = 'white';
+    msg.style.textShadow = '2px 2px 4px #000';
+    msg.style.zIndex = '9999';
+    document.body.appendChild(msg);
+  }
+  msg.style.display = 'block';
+
+  // 数秒後に自動で非表示にする
+  setTimeout(() => {
+    if (msg) msg.style.display = 'none';
+  }, 5000);
+}
+
+const fireworkSketch = (p) => {
+  let fireworks = [];
+  let gravity;
+
+  class Firework {
+    constructor() {
+      this.hu = p.random(255);
+      this.firework = new Particle(p.random(p.width), p.height * 0.7, this.hu, true);
+
+      this.exploded = false;
+      this.particles = [];
+    }
+
+    done() {
+      return this.exploded && this.particles.length === 0;
+    }
+
+    update() {
+      if (!this.exploded) {
+        this.firework.applyForce(gravity);
+        this.firework.update();
+
+        if (this.firework.vel.y >= 0) {
+          this.exploded = true;
+          this.explode();
+        }
+      }
+
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        this.particles[i].applyForce(gravity);
+        this.particles[i].update();
+        if (this.particles[i].done()) {
+          this.particles.splice(i, 1);
+        }
+      }
+    }
+
+    explode() {
+      for (let i = 0; i < 100; i++) {
+        const pNew = new Particle(this.firework.pos.x, this.firework.pos.y, this.hu, false);
+        this.particles.push(pNew);
+      }
+    }
+
+    show() {
+      if (!this.exploded) {
+        this.firework.show();
+      }
+
+      for (let particle of this.particles) {
+        particle.show();
+      }
+    }
+  }
+
+  class Particle {
+    constructor(x, y, hu, firework) {
+      this.pos = p.createVector(x, y);
+      this.firework = firework;
+      this.lifespan = 255;
+      this.hu = hu;
+      this.acc = p.createVector(0, 0);
+
+      if (this.firework) {
+        this.vel = p.createVector(0, p.random(-12, -8));
+      } else {
+        this.vel = p5.Vector.random2D();
+        this.vel.mult(p.random(2, 10));
+      }
+    }
+
+    applyForce(force) {
+      this.acc.add(force);
+    }
+
+    update() {
+      if (!this.firework) {
+        this.vel.mult(0.9);
+        this.lifespan -= 4;
+      }
+
+      this.vel.add(this.acc);
+      this.pos.add(this.vel);
+      this.acc.mult(0);
+    }
+
+    done() {
+      return this.lifespan < 0;
+    }
+
+    show() {
+      p.colorMode(p.HSB);
+      if (!this.firework) {
+        p.strokeWeight(2);
+        p.stroke(this.hu, 255, 255, this.lifespan);
+      } else {
+        p.strokeWeight(4);
+        p.stroke(this.hu, 255, 255);
+      }
+
+      p.point(this.pos.x, this.pos.y);
+    }
+  }
+
+  p.setup = () => {
+    p.createCanvas(window.innerWidth, window.innerHeight);
+    gravity = p.createVector(0, 0.2);
+    p.colorMode(p.HSB);
+    p.background(0);
+  };
+
+  p.draw = () => {
+    p.colorMode(p.RGB);
+    p.background(0, 0, 0, 25);
+    if (p.random(1) < 0.05) {
+      fireworks.push(new Firework());
+    }
+
+    for (let i = fireworks.length - 1; i >= 0; i--) {
+      fireworks[i].update();
+      fireworks[i].show();
+      if (fireworks[i].done()) {
+        fireworks.splice(i, 1);
+      }
+    }
+  };
+};
+
+function startFireworks() {
+  if (!fireworkP5) {
+    const container = document.getElementById('fireworks-container');
+    const message = document.getElementById('congrats-message');
+
+    // 表示
+    container.style.display = 'block';
+    message.style.opacity = '1';
+
+    // 花火描画先を container に
+    fireworkP5 = new p5(fireworkSketch, container);
+
+    // 数秒後に非表示
+    setTimeout(() => {
+      fireworkP5.remove();
+      fireworkP5 = null;
+
+      message.style.opacity = '0';
+      setTimeout(() => {
+        container.style.display = 'none';
+      }, 1000);
+    }, 5000);
+  }
+}
+
+
 // ====================
 // ユーティリティ
 // ====================
@@ -111,11 +292,22 @@ function drawBoard(board,H,W,pieceNames,colors,ctx,goalPiece,leftMargin) {
 
   // 駒名
   const pieces = getPieceBounds(board);
-  ctx.fillStyle="#222"; ctx.font="bold 18px Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillStyle = "#222";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
   for (let num in pieces) {
     const p = pieces[num];
-    const cx = (p.minCol+p.maxCol+1)/2*cellSize;
-    const cy = (p.minRow+p.maxRow+1)/2*cellSize;
+    const cx = (p.minCol + p.maxCol + 1) / 2 * cellSize;
+    const cy = (p.minRow + p.maxRow + 1) / 2 * cellSize;
+
+    // goalPieceだけ太字にする
+    if (Number(num) === goalPiece) {
+      ctx.font = "bold 30px Arial";
+    } else {
+      ctx.font = "normal 18px Arial";
+    }
+
     ctx.fillText(pieceNames[num], cx, cy);
   }
 }
@@ -171,6 +363,11 @@ function animate(states,H,W,pieceNames,colors,ctx,turnDiv,undoBtn){
     if(idx>=states.length){
       clearTimeout(timerId); timerId=null;
       enableDrag(true); undoBtn.disabled=false; isPlayMode=true;
+          // 終了判定を追加
+      if (isGoal(currentBoard, goalPiece, leftMargin)) {
+        showCongratsMessage();
+        startFireworks();
+      }
       return;
     }
     drawBoard(states[idx],H,W,pieceNames,colors,ctx,goalPiece,leftMargin);
@@ -267,6 +464,10 @@ function onMouseUp(e) {
     drawBoard(currentBoard,H,W,pieceNames,colors,ctx,goalPiece,leftMargin);
     turnDiv.textContent=`ターン: ${turn}`;
   }
+  if (isGoal(currentBoard, goalPiece, leftMargin)) {
+    showCongratsMessage();
+    startFireworks();
+  }
   dragStart=null; draggedPiece=0;
 }
 function onTouchStart(e) {
@@ -315,6 +516,10 @@ function onTouchEnd(e) {
       drawBoard(currentBoard,H,W,pieceNames,colors,ctx,goalPiece,leftMargin);
       turnDiv.textContent=`ターン: ${turn}`;
     }
+  }
+  if (isGoal(currentBoard, goalPiece, leftMargin)) {
+    showCongratsMessage();
+    startFireworks();
   }
   dragStart=null; draggedPiece=0;
   e.preventDefault();
@@ -409,5 +614,17 @@ function generateDatasetButtons(maxNum = 20) {
   });
 }
 
+function isGoal(board, goalPiece, leftMargin) {
+  const bounds = getPieceBounds(board)[goalPiece];
+  if (!bounds) return false;
+
+  const atBottom = bounds.maxRow === board.length - 1;
+  const alignedToExit = bounds.minCol === leftMargin;
+
+  return atBottom && alignedToExit;
+}
 // データセットボタン生成開始
-generateDatasetButtons(20); 
+generateDatasetButtons(20);
+
+window.addEventListener('load', () => {
+});

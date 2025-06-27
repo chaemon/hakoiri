@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"></script>
 <meta charset="UTF-8" />
 <title>箱入り娘ビジュアライザー</title>
 <style>
@@ -58,9 +59,34 @@
   #board {
     touch-action: none; /* タッチアクション無効化 */
   }
+  
+  #fireworks-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  #congrats-message {
+    position: absolute;
+    top: 40%; /* ← ここを50%→40%に */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 5vw;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 10px #f0f, 0 0 20px #0ff;
+    font-family: sans-serif;
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+
 </style>
 </head>
 <body>
+
 <h1>箱入り娘ビジュアライザー</h1>
 
 <div class="textarea-container">
@@ -113,6 +139,10 @@
 <label for="speedSlider">速度:</label>
 <input id="speedSlider" type="range" min="1" max="10" value="5">
 <div id="turn">ターン: 0</div>
+<div id="fireworks-container">
+  <div id="congrats-message">Congratulations!</div>
+</div>
 <script src="script.js"></script>
+
 </body>
 </html>
